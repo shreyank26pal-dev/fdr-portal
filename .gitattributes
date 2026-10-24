@@ -1,0 +1,8 @@
+# Keep line endings consistent (LF) for everyone, Windows included
+* text=auto eol=lf
+
+# Binary files: never touch line endings
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary

@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fdr
+      POSTGRES_PASSWORD: fdr
+      POSTGRES_DB: fdr_portal
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fdr -d fdr_portal"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # web inbox: http://localhost:8025
+      - "1025:1025"   # SMTP
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://fdr:fdr@db:5432/fdr_portal
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      STORAGE_DIR: /app/storage
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - docstore:/app/storage
+    command: sh -c "python -m scripts.seed --if-empty && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  pgdata:
+  docstore:
