@@ -8,14 +8,29 @@ venv/
 
 # Secrets & local data
 .env
+.env.*
+!.env.example
+**/secret*
+**/*.pem
+**/*.key
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+backend/*.db
 backend/storage/
 storage/
+frontend/stitch-explore-home.html
 
-# Node / Next.js (frontend)
+# Node / Vite / Next.js (frontend)
 node_modules/
+dist/
+frontend/dist/
 .next/
 out/
-frontend/.env*.local
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 # OS / editors
 .DS_Store

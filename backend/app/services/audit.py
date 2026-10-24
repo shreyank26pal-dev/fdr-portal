@@ -33,7 +33,8 @@ def _canonical(entry: dict[str, Any]) -> str:
 
 
 def _entry_dict(row: AuditLog) -> dict[str, Any]:
-    ts = row.ts.astimezone(timezone.utc).isoformat(timespec="microseconds")
+    dt = row.ts if row.ts.tzinfo else row.ts.replace(tzinfo=timezone.utc)
+    ts = dt.astimezone(timezone.utc).isoformat(timespec="microseconds")
     return {
         "ts": ts,
         "actor_id": row.actor_id,

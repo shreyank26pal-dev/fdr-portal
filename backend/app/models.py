@@ -6,7 +6,7 @@ in `field_checks`. The two are never merged.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -22,6 +22,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    TypeDecorator,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -60,7 +61,17 @@ def _now() -> datetime:
     return clock.now()
 
 
-TS = DateTime(timezone=True)
+class _TZDateTime(TypeDecorator):
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_result_value(self, value: datetime | None, dialect) -> datetime | None:
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+
+TS = _TZDateTime()
 
 
 # --------------------------------------------------------------------------- #
@@ -284,7 +295,7 @@ class AuditLog(Base):
     """Append-only, hash-chained audit log. hash = sha256(canonical(entry) + prev_hash)."""
     __tablename__ = "audit_log"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
     ts: Mapped[datetime] = mapped_column(TS)
     actor_id: Mapped[int | None] = mapped_column(Integer)
     actor_email: Mapped[str | None] = mapped_column(String(255))

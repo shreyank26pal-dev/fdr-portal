@@ -1,4 +1,6 @@
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -71,6 +73,66 @@ def rule_catalogue(user: User = Depends(get_current_user), db: Session = Depends
     ov = config_service.get(db, "rule_overrides") or {}
     return [{"rule_id": k, "code": v.code, "default_severity": v.severity.value, "description": v.description,
              "override": ov.get(k)} for k, v in rules.RULES.items()]
+
+
+SAMPLES_DIR = Path(__file__).resolve().parents[2] / "samples"
+SAMPLE_META = {
+    "fdr_demo_correct.pdf": {
+        "label": "Valid SBI FDR Receipt (₹15,00,000)",
+        "doc_type": "FDR_RECEIPT",
+        "description": "Clean synthetic SBI FDR receipt matching CBS record SBI-FDR-909100 (₹15,00,000, SBIN0001234).",
+    },
+    "fdr_demo_correct_scan.png": {
+        "label": "Valid SBI FDR Scanned Image (.PNG)",
+        "doc_type": "FDR_RECEIPT",
+        "description": "Rasterized scan of valid SBI FDR receipt for testing image OCR.",
+    },
+    "lien_letter_demo.pdf": {
+        "label": "Bank Lien Marking Confirmation Letter",
+        "doc_type": "LIEN_LETTER",
+        "description": "Unconditional bank lien marking letter in favour of Member Secretary, AICTE.",
+    },
+    "undertaking_demo.pdf": {
+        "label": "Institution Release / Refund Undertaking",
+        "doc_type": "UNDERTAKING",
+        "description": "Signed institution undertaking required before submitting a Release / Refund request.",
+    },
+    "fdr_demo_tampered_words.pdf": {
+        "label": "Tampered FDR — Words vs Figures Mismatch (Rule R15)",
+        "doc_type": "FDR_RECEIPT",
+        "description": "Digits altered to ₹50,00,000 while words still read 'Fifteen Lakh Rupees Only' — triggers CRITICAL R15.",
+    },
+    "fdr_demo_duplicate_number.pdf": {
+        "label": "Duplicate FDR — Reused Across Institutions (Rule R09)",
+        "doc_type": "FDR_RECEIPT",
+        "description": "FDR number SBI-FDR-800000 already registered under another institution — triggers CRITICAL R09.",
+    },
+}
+
+
+@public.get("/meta/samples", summary="[DEMO] Synthetic sample documents available for 1-click loading")
+def list_demo_samples():
+    _demo_only()
+    items = []
+    if SAMPLES_DIR.exists():
+        for name, meta in SAMPLE_META.items():
+            fp = SAMPLES_DIR / name
+            if fp.exists():
+                items.append({"filename": name, "size_bytes": fp.stat().st_size, **meta})
+    return items
+
+
+@public.get("/meta/samples/{filename}", summary="[DEMO] Download a synthetic sample file by filename")
+def get_demo_sample(filename: str):
+    _demo_only()
+    safe_name = Path(filename).name
+    if safe_name != filename or safe_name not in SAMPLE_META:
+        raise HTTPException(404, "Sample file not found")
+    fp = SAMPLES_DIR / safe_name
+    if not fp.exists():
+        raise HTTPException(404, "Sample file not generated yet")
+    media = "image/png" if safe_name.endswith(".png") else "application/pdf"
+    return FileResponse(fp, media_type=media, filename=safe_name)
 
 
 @public.get("/compliance-cases", summary="Compliance cases (block release while OPEN)")
@@ -326,4 +388,15 @@ def untamper(entry_id: int, user: User = Depends(ADMIN), db: Session = Depends(g
     backup.value = {k: v for k, v in backup.value.items() if k != str(entry_id)}
     db.commit()
     return {"restored": entry_id}
+
+
+@router.post("/demo/reseed", summary="[DEMO] Reset database and storage back to clean golden demo dataset")
+def reseed_demo(user: User = Depends(ADMIN), db: Session = Depends(get_db)):
+    _demo_only()
+    db.close()
+    from scripts.seed import seed
+    clock.set_offset_days(0)
+    seed(force=True)
+    return {"reseeded": True, "today": clock.today(), "offset_days": clock.offset_days()}
+
 
