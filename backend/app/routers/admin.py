@@ -78,34 +78,34 @@ def rule_catalogue(user: User = Depends(get_current_user), db: Session = Depends
 SAMPLES_DIR = Path(__file__).resolve().parents[2] / "samples"
 SAMPLE_META = {
     "fdr_demo_correct.pdf": {
-        "label": "Valid SBI FDR Receipt (₹15,00,000)",
-        "doc_type": "FDR_RECEIPT",
-        "description": "Clean synthetic SBI FDR receipt matching CBS record SBI-FDR-909100 (₹15,00,000, SBIN0001234).",
+        "label": "Valid SBI FDR Receipt (Rs 25,00,000)",
+        "doc_type": "FDR_SCAN",
+        "description": "Clean synthetic SBI FDR 40112233445 (IFSC SBIN0004321, Rs 25,00,000) matching the simulated bank record - verifies green.",
     },
     "fdr_demo_correct_scan.png": {
         "label": "Valid SBI FDR Scanned Image (.PNG)",
-        "doc_type": "FDR_RECEIPT",
-        "description": "Rasterized scan of valid SBI FDR receipt for testing image OCR.",
+        "doc_type": "FDR_SCAN",
+        "description": "Image of the same FDR, to test the image OCR path (needs Tesseract or Google Vision).",
     },
     "lien_letter_demo.pdf": {
         "label": "Bank Lien Marking Confirmation Letter",
         "doc_type": "LIEN_LETTER",
-        "description": "Unconditional bank lien marking letter in favour of Member Secretary, AICTE.",
+        "description": "Bank letter confirming lien marked in favour of AICTE.",
     },
     "undertaking_demo.pdf": {
         "label": "Institution Release / Refund Undertaking",
         "doc_type": "UNDERTAKING",
-        "description": "Signed institution undertaking required before submitting a Release / Refund request.",
+        "description": "Institution undertaking required before a Release / Refund request can proceed.",
     },
     "fdr_demo_tampered_words.pdf": {
-        "label": "Tampered FDR — Words vs Figures Mismatch (Rule R15)",
-        "doc_type": "FDR_RECEIPT",
-        "description": "Digits altered to ₹50,00,000 while words still read 'Fifteen Lakh Rupees Only' — triggers CRITICAL R15.",
+        "label": "Tampered FDR - Words vs Figures Mismatch (Rule R15)",
+        "doc_type": "FDR_SCAN",
+        "description": "Figures say Rs 25,00,000 but words say 'Two Lakh Fifty Thousand'; the bank record says 2.5 lakh - triggers R15 and a bank mismatch.",
     },
     "fdr_demo_duplicate_number.pdf": {
-        "label": "Duplicate FDR — Reused Across Institutions (Rule R09)",
-        "doc_type": "FDR_RECEIPT",
-        "description": "FDR number SBI-FDR-800000 already registered under another institution — triggers CRITICAL R09.",
+        "label": "Duplicate FDR - Reused Across Institutions (Rule R09)",
+        "doc_type": "FDR_SCAN",
+        "description": "FDR number already registered under another institution - triggers CRITICAL R09.",
     },
 }
 

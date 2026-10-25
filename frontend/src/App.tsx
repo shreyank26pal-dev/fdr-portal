@@ -4,6 +4,9 @@ import {
   getToken,
   initUserInvalidSync,
   loginWithCredentials,
+  setToken,
+  SESSION_EXPIRED_EVENT,
+  DEMO_ACCOUNTS,
 } from './api';
 import { BankMaster, User } from './types';
 import { ActiveTab, Header } from './components/Header';
@@ -14,6 +17,17 @@ import { CaseSplitView } from './components/CaseSplitView';
 import { OfficerConsole } from './components/OfficerConsole';
 import { BankConfirmPortal } from './components/BankConfirmPortal';
 import { AdminAuditConsole } from './components/AdminAuditConsole';
+import { LoginPage } from './components/LoginPage';
+import { LandingPage } from './components/LandingPage';
+import type { Role } from './types';
+
+const landingTabFor = (role: Role): ActiveTab => {
+  if (role === 'INSTITUTION') return 'institution';
+  if (role === 'BANK') return 'bank';
+  if (role === 'ADMIN') return 'admin';
+  if (role === 'SCRUTINY_OFFICER' || role === 'REGIONAL_OFFICER' || role === 'APPROVING_AUTHORITY' || role === 'AUDITOR') return 'officer';
+  return 'explore';
+};
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -27,6 +41,10 @@ export const App: React.FC = () => {
   const [showDemoTour, setShowDemoTour] = useState<boolean>(false);
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<number | null>(null);
   const [activeBlindToken, setActiveBlindToken] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState<boolean>(false);
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
+  const [authView, setAuthView] = useState<'landing' | 'login'>('landing');
+  const [prefillEmail, setPrefillEmail] = useState<string | undefined>(undefined);
 
   const refreshGlobalTelemetry = async () => {
     try {
@@ -42,20 +60,21 @@ export const App: React.FC = () => {
     if (!getToken()) return;
     try {
       const [meUser, bankList, notifs] = await Promise.all([
-        apiFetch<User>('/auth/me'),
+        apiFetch<any>('/auth/me'),
         apiFetch<BankMaster[]>('/banks').catch(() => []),
         apiFetch<any[]>('/notifications').catch(() => []),
       ]);
-      setUser(meUser);
+      // /auth/me returns { user, institution, bank, simulated_today, ... }
+      setUser((meUser?.user ?? meUser) as User);
       if (bankList?.length) setBanks(bankList);
       setNotifications(notifs || []);
 
       const dash = await apiFetch('/dashboard/summary').catch(() => null);
       if (dash) setSummary(dash);
     } catch {
-      // If token expired, re-login as default officer
-      const data = await loginWithCredentials('officer@aicte-demo.in');
-      setUser(data.user);
+      // token invalid or expired -> show the login page
+      setToken(null);
+      setUser(null);
     }
   };
 
@@ -73,19 +92,48 @@ export const App: React.FC = () => {
     }
 
     (async () => {
-      if (!getToken()) {
-        const data = await loginWithCredentials('officer@aicte-demo.in');
-        setUser(data.user);
-      }
       await refreshGlobalTelemetry();
+      setAuthChecked(true);
     })();
+
+    const onExpired = () => {
+      setUser(null);
+      setAuthView('login');
+      setLoginNotice('Your session has expired. Please sign in again.');
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
+
+  const handleLoggedIn = async (u: User) => {
+    setUser(u);
+    setLoginNotice(null);
+    setSelectedInstrumentId(null);
+    if (!activeBlindToken) setActiveTab(landingTabFor(u.role));
+    await refreshGlobalTelemetry();
+  };
+
+  const handleLogout = () => {
+    // JWTs are stateless: signing out discards the token on this device
+    setToken(null);
+    setUser(null);
+    setSummary(null);
+    setNotifications([]);
+    setSelectedInstrumentId(null);
+    setShowDemoTour(false);
+    setActiveTab('explore');
+    setPrefillEmail(undefined);
+    setLoginNotice(null);
+    setAuthView('landing');
+  };
 
   const handleSwitchAccount = async (email: string) => {
     setSwitchingAccount(true);
     try {
       const data = await loginWithCredentials(email, 'Password@123');
       setUser(data.user);
+      // a case opened by the previous role may not be visible to the new one
+      setSelectedInstrumentId(null);
       await refreshGlobalTelemetry();
     } finally {
       setSwitchingAccount(false);
@@ -126,9 +174,71 @@ export const App: React.FC = () => {
     setActiveTab('bank');
   };
 
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2] text-slate-500 text-sm">
+        Loading SecureDeposit…
+      </div>
+    );
+  }
+
+  // Bank nodal officer opening a one-time link: public page, no sign-in
+  if (!user && activeBlindToken) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#0F172A]">
+        <div className="bg-[#0F2547] text-white text-xs px-4 sm:px-6 py-2 font-semibold">
+          SecureDeposit • AICTE FDR confirmation for bank nodal officers
+        </div>
+        <div className="aicte-rainbow-bar w-full" />
+        <main id="main-content" className="flex-1 max-w-[1100px] w-full mx-auto px-4 sm:px-6 py-6">
+          <BankConfirmPortal
+            user={null}
+            banks={banks}
+            activeBlindToken={activeBlindToken}
+            setActiveBlindToken={setActiveBlindToken}
+            onSwitchAccount={handleSwitchAccount}
+            onInspectInstrument={handleInspectInstrument}
+            onRefreshGlobal={refreshGlobalTelemetry}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  if (!user && authView === 'landing') {
+    return (
+      <LandingPage
+        onSignIn={(email) => {
+          setPrefillEmail(email);
+          setLoginNotice(null);
+          setAuthView('login');
+          window.scrollTo(0, 0);
+        }}
+      />
+    );
+  }
+
+  if (!user) {
+    const demo = prefillEmail ? DEMO_ACCOUNTS.find((a) => a.email === prefillEmail) : undefined;
+    return (
+      <LoginPage
+        key={prefillEmail || 'blank'}
+        onLoggedIn={handleLoggedIn}
+        notice={loginNotice}
+        onBack={() => {
+          setLoginNotice(null);
+          setAuthView('landing');
+        }}
+        initialEmail={prefillEmail}
+        initialPassword={demo?.password}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#0F172A]">
       <Header
+        onLogout={handleLogout}
         user={user}
         activeTab={activeTab}
         setActiveTab={setActiveTab}

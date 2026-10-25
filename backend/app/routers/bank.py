@@ -116,9 +116,11 @@ def link_respond(token: str, body: BankResponseIn, db: Session = Depends(get_db)
 
 
 # ------------------------- 3. bank user portal ------------------------------ #
-@router.get("/bank/requests", summary="Pending confirmation requests for my bank (BANK role)")
-def bank_requests(user: User = Depends(require_roles(Role.BANK)), db: Session = Depends(get_db)):
-    q = select(VerificationRequest).where(VerificationRequest.bank_id == user.bank_id).order_by(VerificationRequest.id.desc())
+@router.get("/bank/requests", summary="Confirmation requests for my bank (BANK role; ADMIN sees all banks)")
+def bank_requests(user: User = Depends(require_roles(Role.BANK, Role.ADMIN, Role.AUDITOR)), db: Session = Depends(get_db)):
+    q = select(VerificationRequest).order_by(VerificationRequest.id.desc())
+    if user.role == Role.BANK:
+        q = q.where(VerificationRequest.bank_id == user.bank_id)
     out = []
     for vr in db.execute(q).scalars():
         inst = db.get(Instrument, vr.instrument_id)

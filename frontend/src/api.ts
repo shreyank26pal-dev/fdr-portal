@@ -84,6 +84,7 @@ export const DEMO_ACCOUNTS: DemoAccountPreset[] = [
 ];
 
 const TOKEN_KEY = 'securedeposit_jwt';
+export const SESSION_EXPIRED_EVENT = 'securedeposit:session-expired';
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -134,6 +135,11 @@ export async function apiFetch<T = any>(
     }
     const error: any = new Error(errText);
     error.status = res.status;
+    // Expired / invalid session anywhere in the app -> back to the login page
+    if (res.status === 401 && token && !path.includes('/auth/login')) {
+      setToken(null);
+      window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+    }
     throw error;
   }
 
@@ -146,11 +152,12 @@ export async function apiFetch<T = any>(
 
 export async function loginWithCredentials(
   email: string,
-  password = 'Password@123'
+  password = 'Password@123',
+  otp?: string
 ): Promise<{ access_token: string; user: User }> {
   const data = await apiFetch<{ access_token: string; user: User }>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(otp ? { email, password, otp } : { email, password }),
   });
   setToken(data.access_token);
   return data;

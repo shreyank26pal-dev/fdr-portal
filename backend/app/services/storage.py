@@ -49,7 +49,34 @@ def sniff_content_type(data: bytes) -> str | None:
     return None
 
 
-_ACTIVE_PDF = re.compile(rb"/(JavaScript|JS|Launch|EmbeddedFile|OpenAction\s*<<[^>]*?/JS)")
+# A PDF name token like /JS must be followed by a delimiter, otherwise "/JSxyz" or random bytes match.
+_ACTIVE_NAME = re.compile(rb"/(JavaScript|JS|Launch|EmbeddedFiles?)(?=[\s/<>\[\]()]|$)")
+
+
+def pdf_has_active_content(data: bytes) -> bool:
+    """Inspect the PDF's object dictionaries (decompressed) for scripts, launch actions or embedded files.
+
+    Scanning raw bytes gives false positives, because compressed streams can contain any byte
+    sequence. So we parse the document with PyMuPDF and only look at dictionary source text.
+    """
+    try:
+        try:
+            import pymupdf as fitz
+        except ImportError:  # older PyMuPDF
+            import fitz
+        doc = fitz.open(stream=data, filetype="pdf")
+        if doc.embfile_count():
+            return True
+        for xref in range(1, doc.xref_length()):
+            try:
+                src = doc.xref_object(xref, compressed=False)
+            except Exception:  # noqa: BLE001
+                continue
+            if _ACTIVE_NAME.search(src.encode("latin-1", "ignore")):
+                return True
+        return False
+    except Exception:  # noqa: BLE001 - unparseable PDF: fall back to a conservative byte scan
+        return bool(_ACTIVE_NAME.search(data))
 
 
 def validate_upload(data: bytes) -> str:
@@ -60,7 +87,7 @@ def validate_upload(data: bytes) -> str:
     ctype = sniff_content_type(data)
     if ctype is None:
         raise UploadRejected("Only PDF, PNG and JPEG files are accepted")
-    if ctype == "application/pdf" and _ACTIVE_PDF.search(data):
+    if ctype == "application/pdf" and pdf_has_active_content(data):
         raise UploadRejected("PDF contains active content (JavaScript / launch actions) and was blocked")
     return ctype
 

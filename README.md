@@ -30,20 +30,28 @@ To reset the demo to a clean state at any time:
 docker compose exec api python -m scripts.seed --reset
 ```
 
-### Without Docker for the API (Postgres still in Docker)
+### Without Docker (SQLite, simplest on Windows)
 
-```bash
-docker compose up -d db mailpit
+You need **Python 3.11+** and **Node.js 18+**.
+
+```powershell
+# one-time setup
 cd backend
 python -m venv .venv
-.venv\Scripts\activate            # Windows   (macOS/Linux: source .venv/bin/activate)
-pip install -r requirements.txt
-copy .env.example .env            # Windows   (macOS/Linux: cp .env.example .env)
-python -m scripts.seed --reset
-uvicorn app.main:app --reload
+.venv\Scripts\pip install -r requirements.txt
+"DATABASE_URL=sqlite:///./fdr_portal.db`nSMTP_HOST=`nSTORAGE_DIR=./storage" | Out-File -Encoding ascii .env
+.venv\Scripts\python -m scripts.seed --reset
+cd ..\frontend
+npm install
+cd ..
+
+# every time
+powershell -ExecutionPolicy Bypass -File .\start-securedeposit.ps1
 ```
 
-OCR on Windows without Docker: install Tesseract (UB-Mannheim build) and set `TESSERACT_CMD` in `.env`. You don't need it for digital PDFs, because their text layer is read directly.
+This opens the frontend at http://localhost:5173 and the API at http://127.0.0.1:8000/docs. Emails are logged as SIMULATED; the Mailpit inbox is only available with Docker.
+
+OCR for PNG/JPG scans needs Tesseract (UB-Mannheim build). After installing it, add `TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe` to `backend/.env`. Digital PDFs work without it.
 
 ### Tests
 

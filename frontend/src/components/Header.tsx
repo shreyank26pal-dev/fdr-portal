@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
+  LogOut,
   ShieldCheck,
   Bell,
   Clock,
@@ -41,6 +42,7 @@ interface HeaderProps {
   showDemoTour: boolean;
   setShowDemoTour: (v: boolean) => void;
   selectedInstrumentId: number | null;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -56,6 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
   showDemoTour,
   setShowDemoTour,
   selectedInstrumentId,
+  onLogout,
 }) => {
   const noteDialogRef = useRef<HTMLDialogElement>(null);
   const helpDialogRef = useRef<HTMLDialogElement>(null);
@@ -320,6 +323,17 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
+
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-700 text-slate-700 transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" /> Sign out
+              </button>
+            )}
 
             {/* 1-Click Role Switcher */}
             <div className="relative flex items-center">

@@ -556,23 +556,20 @@ class Seeder:
         )
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--reset", action="store_true", help="drop everything and re-seed")
-    ap.add_argument("--if-empty", action="store_true", help="seed only if no users exist")
-    args = ap.parse_args()
-
-    if args.reset:
+def seed(force: bool = False, if_empty: bool = False) -> None:
+    """Programmatic entry point (used by POST /admin/demo/reseed). force=True wipes and rebuilds."""
+    if force:
         print("Dropping all tables ...")
         Base.metadata.drop_all(bind=engine)
         shutil.rmtree(settings.STORAGE_DIR, ignore_errors=True)
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         if db.execute(select(User.id).limit(1)).scalar():
-            if args.if_empty or not args.reset:
+            if if_empty or not force:
                 print("Database already has data - skipping seed (use --reset to rebuild).")
                 return
         t0 = time.time()
+        rnd.seed(26265)
         s = Seeder(db)
         print("Masters ...")
         s.masters()
@@ -585,6 +582,14 @@ def main() -> None:
         n = db.query(Instrument).count()
         print(f"Done in {time.time() - t0:.0f}s: {len(s.insts)} institutions, {n} instruments.")
         print(f"Login with any demo account, password: {PASSWORD}  (see README)")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--reset", action="store_true", help="drop everything and re-seed")
+    ap.add_argument("--if-empty", action="store_true", help="seed only if no users exist")
+    args = ap.parse_args()
+    seed(force=args.reset, if_empty=args.if_empty)
 
 
 if __name__ == "__main__":
