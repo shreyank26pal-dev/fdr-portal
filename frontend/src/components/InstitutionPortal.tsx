@@ -12,6 +12,14 @@ import {
   Download,
   Eye,
   PackageCheck,
+  Award,
+  FileText,
+  Fingerprint,
+  ShieldCheck,
+  ExternalLink,
+  Printer,
+  X,
+  Check,
 } from 'lucide-react';
 import {
   apiFetch,
@@ -70,6 +78,22 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
     'Extra intake deposit eligible for formal AICTE discharge while maintaining statutory minimum security.'
   );
   const [refundDetail, setRefundDetail] = useState<any | null>(null);
+
+  // India Stack & Certificate state
+  const [showDigiLockerModal, setShowDigiLockerModal] = useState(false);
+  const [digiLockerLoading, setDigiLockerLoading] = useState(false);
+  const [digiLockerVerified, setDigiLockerVerified] = useState(false);
+  const [digiLockerDocId, setDigiLockerDocId] = useState<string | null>(null);
+
+  const [showAadhaarModal, setShowAadhaarModal] = useState(false);
+  const [aadhaarOtp, setAadhaarOtp] = useState('');
+  const [aadhaarOtpSent, setAadhaarOtpSent] = useState(false);
+  const [aadhaarSigned, setAadhaarSigned] = useState(false);
+  const [aadhaarSignHash, setAadhaarSignHash] = useState<string | null>(null);
+  const [aadhaarConsent, setAadhaarConsent] = useState(false);
+  const [aadhaarError, setAadhaarError] = useState<string | null>(null);
+
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
 
   const loadOverview = async () => {
     setError(null);
@@ -216,6 +240,62 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
     } catch {
       // ignore
     }
+  };
+
+  const handleDigiLockerImport = async () => {
+    setDigiLockerLoading(true);
+    setError(null);
+    try {
+      // Simulate real-time DigiLocker PKI fetch & decryption delay
+      await new Promise((r) => setTimeout(r, 600));
+
+      const rFile = await loadSampleAsFile('fdr_demo_correct.pdf');
+      const lFile = await loadSampleAsFile('lien_letter_demo.pdf');
+
+      setReceiptFile(rFile);
+      setLienFile(lFile);
+
+      setFdrNumber('SBI00991100');
+      setBankName('State Bank of India');
+      setBranchName('Pune Main Branch');
+      setIfscCode('SBIN0004321');
+      setPrincipalAmount('2500000');
+      setIssueDate('2026-01-15');
+      setMaturityDate('2034-01-15');
+      setLienMarked(true);
+      setLienInFavourOf('Member Secretary, AICTE');
+
+      setDigiLockerVerified(true);
+      setDigiLockerDocId('DL-SBI-FDR-2026-991100');
+      setShowDigiLockerModal(false);
+      setDupCheckResult(null);
+
+      setBannerMsg(
+        'DigiLocker Import Verified! Successfully pulled digital FDR Certificate & Lien Confirmation directly from State Bank of India with PKI certificate chain.'
+      );
+    } catch (e: any) {
+      setError(e.message || 'DigiLocker fetch failed');
+    } finally {
+      setDigiLockerLoading(false);
+    }
+  };
+
+  const handleVerifyAadhaarOtp = () => {
+    if (!aadhaarConsent) {
+      setAadhaarError('Please check the consent box to proceed with legal eSign.');
+      return;
+    }
+    if (aadhaarOtp.trim() !== '123456') {
+      setAadhaarError('Invalid OTP! Please enter demo OTP: 123456');
+      return;
+    }
+    setAadhaarError(null);
+    setAadhaarSigned(true);
+    setAadhaarSignHash('SHA256: 7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069');
+    setShowAadhaarModal(false);
+    setBannerMsg(
+      'Statutory Undertaking digitally eSigned via Aadhaar OTP (Dr. Rajesh Sharma, Signatory Ref: XXXX-8921). Ready for submission!'
+    );
   };
 
   const handleCreateDraftAndUploadDocs = async (e: React.FormEvent) => {
@@ -451,6 +531,15 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCertificateModal(true)}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+          >
+            <Award className="w-4 h-4 text-amber-600" />
+            <span>AICTE Deposit Certificate</span>
+          </button>
+
           <span className="text-xs font-semibold text-slate-500 mr-1">Demo Scenarios:</span>
           {[
             { email: 'college1@aicte-demo.in', label: 'College 1 (Normal)' },
@@ -848,14 +937,14 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
             <p className="text-xs text-slate-200">
               Load any of the 3 backend-generated synthetic PDFs with 1 click (or upload your own PDF/PNG below) to test clean OCR auto-fill, Words-vs-Figures forgery detection (Rule R15), or Cross-Institution Duplicate detection (Rule R09):
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <button
                 type="button"
                 onClick={() => handleLoadSampleScenario('clean')}
                 className="p-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-left space-y-1 transition cursor-pointer"
               >
                 <div className="font-mono text-xs font-bold text-emerald-300">
-                  1. Clean Valid Receipt (fdr_demo_correct.pdf)
+                  1. Clean Valid Receipt
                 </div>
                 <p className="text-[11px] text-slate-200">
                   Matches SBI CBS record (₹25,00,000, SBIN0004321). OCR auto-fill + Bank API → 100% Bank-verified!
@@ -868,7 +957,7 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
                 className="p-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-amber-300/40 text-left space-y-1 transition cursor-pointer"
               >
                 <div className="font-mono text-xs font-bold text-amber-300">
-                  2. Tampered Words vs Figures (Rule R15)
+                  2. Tampered Words (R15)
                 </div>
                 <p className="text-[11px] text-slate-200">
                   Figures say ₹25,00,000 while words on PDF read &ldquo;Two Lakh Fifty Thousand&rdquo; → triggers R15!
@@ -881,10 +970,26 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
                 className="p-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-rose-300/40 text-left space-y-1 transition cursor-pointer"
               >
                 <div className="font-mono text-xs font-bold text-rose-300">
-                  3. Cross-Institution Duplicate (Rule R09)
+                  3. Cross-Inst. Dup (R09)
                 </div>
                 <p className="text-[11px] text-slate-200">
                   Reuses an FDR number already registered under another college — caught on blur &amp; upload!
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDigiLockerModal(true)}
+                className="p-3.5 rounded-xl bg-blue-500/25 hover:bg-blue-500/35 border border-cyan-400/60 text-left space-y-1 transition cursor-pointer"
+              >
+                <div className="font-mono text-xs font-bold text-cyan-300 flex items-center justify-between">
+                  <span>4. DigiLocker Import</span>
+                  <span className="px-1.5 py-0.5 rounded bg-cyan-400/30 text-cyan-100 text-[9px] font-bold">
+                    India Stack
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-200">
+                  Pull digitally-signed FDR receipt and lien letter directly from DigiLocker repository!
                 </p>
               </button>
             </div>
@@ -921,6 +1026,37 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
                 {dupCheckResult.other_institution
                   ? '(Registered under another AICTE institution!)'
                   : ''}
+              </div>
+            )}
+
+            {digiLockerVerified && (
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-950 text-xs flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-700 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                    DL
+                  </div>
+                  <div>
+                    <div className="font-bold flex items-center gap-1.5 text-blue-900">
+                      <ShieldCheck className="w-4 h-4 text-blue-700" />
+                      Digital Documents Imported via DigiLocker (India Stack)
+                    </div>
+                    <div className="text-[11px] text-slate-600 font-mono">
+                      Certificate ID: {digiLockerDocId || 'DL-SBI-FDR-2026-991100'} • Issuer: State Bank of India • URI: in.gov.digilocker.sbi/fdr
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold">
+                    ✓ PKI Verified
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDigiLockerVerified(false)}
+                    className="text-xs text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1299,12 +1435,81 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
               />
             </div>
 
+            {/* India Stack: Aadhaar eSign Section for Statutory Undertaking */}
+            <div className="p-4 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/70 to-indigo-50/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Fingerprint className="w-4 h-4 text-blue-700" />
+                  <span className="text-xs font-bold text-slate-900">
+                    India Stack: Statutory Undertaking eSign (Aadhaar OTP)
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-800">
+                  IT Act Sec 3A
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                As per AICTE APH regulations, the institution head must execute a verified statutory undertaking certifying zero pending fee litigation or student dues prior to FDR lien discharge.
+              </p>
+
+              {aadhaarSigned ? (
+                <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-950 space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5 text-emerald-800">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      Legally eSigned via Aadhaar OTP (Simulated India Stack)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAadhaarSigned(false)}
+                      className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                    >
+                      Reset eSign
+                    </button>
+                  </div>
+                  <div className="text-[11px] text-emerald-900 font-mono">
+                    Signatory: {overview?.institution?.name || 'Principal / Authorized Head'} (Aadhaar: XXXX-XXXX-8921)
+                  </div>
+                  <div className="text-[10px] text-emerald-700 font-mono truncate">
+                    Digital Digest: {aadhaarSignHash || 'SHA256: 7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069'}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    eSign Gateway: C-DAC / NSDL e-Gov eSign Provider • Certified Legal Evidence Stamp
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <span className="text-xs text-amber-800 font-medium flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    Undertaking requires digital authentication
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAadhaarOtp('');
+                      setAadhaarOtpSent(false);
+                      setAadhaarError(null);
+                      setAadhaarConsent(false);
+                      setShowAadhaarModal(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-[#0F2547] hover:bg-blue-900 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                  >
+                    <Fingerprint className="w-3.5 h-3.5 text-amber-300" />
+                    eSign via Aadhaar OTP
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
               disabled={!!busyAction || !selectedRefundFdrId}
               className="w-full py-2.5 px-4 rounded-xl bg-[#0F2547] hover:bg-blue-800 text-white text-xs font-bold cursor-pointer"
             >
-              {busyAction || 'Submit Release Request & Upload Signed Undertaking PDF'}
+              {busyAction ||
+                (aadhaarSigned
+                  ? 'Submit Release Request with eSigned Undertaking'
+                  : 'Submit Release Request & Upload Undertaking PDF')}
             </button>
 
             {overview?.refunds?.length > 0 && (
@@ -1432,6 +1637,460 @@ export const InstitutionPortal: React.FC<InstitutionPortalProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* DIGILOCKER IMPORT MODAL (INDIA STACK) */}
+      {showDigiLockerModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="bg-[#0b3c60] text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white text-[#0b3c60] font-black text-sm flex items-center justify-center shadow-sm">
+                  DL
+                </div>
+                <div>
+                  <div className="text-base font-display font-extrabold flex items-center gap-2">
+                    DigiLocker • National Digital Locker System
+                  </div>
+                  <div className="text-xs text-blue-200">
+                    Towards Paperless Governance • Ministry of Electronics &amp; IT (MeitY)
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDigiLockerModal(false)}
+                className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Profile Bar */}
+            <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex flex-wrap items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-700">Authenticated Signatory:</span>
+                <span className="font-bold text-slate-900">{overview?.institution?.name || 'Dr. Rajesh Sharma (Principal)'}</span>
+              </div>
+              <div className="text-slate-500 font-mono">
+                Aadhaar Linked: <strong>XXXXXXXX8921</strong> (UIDAI Verified)
+              </div>
+            </div>
+
+            {/* Body: Available Verified Banking Documents */}
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Issued Documents in DigiLocker Vault (Bank Repository)
+                </span>
+                <p className="text-xs text-slate-500">
+                  The following tamper-evident instruments were issued by State Bank of India directly into your institutional DigiLocker account:
+                </p>
+              </div>
+
+              {/* Doc 1 */}
+              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/40 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <span className="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-mono text-[10px] font-bold">
+                      FDR_RECEIPT • PKI-SIGNED
+                    </span>
+                    <h4 className="font-display font-bold text-sm text-slate-900">
+                      State Bank of India — Term Deposit Receipt (FDR #SBI00991100)
+                    </h4>
+                    <p className="text-xs text-slate-600 font-mono">
+                      Doc URI: in.gov.digilocker.sbi/fdr/991100 • Issued: 15 Jan 2026
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                    ₹25,00,000
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs pt-2 border-t border-blue-200/60 text-slate-600">
+                  <div>Branch: <strong className="text-slate-800">Pune Main (SBIN0004321)</strong></div>
+                  <div>Tenure: <strong className="text-slate-800">8 Years (2026-2034)</strong></div>
+                  <div>Lien: <strong className="text-emerald-700">Joint to AICTE</strong></div>
+                </div>
+              </div>
+
+              {/* Doc 2 */}
+              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <span className="inline-block px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-mono text-[10px] font-bold">
+                      LIEN_LETTER • DIGITAL_SEAL
+                    </span>
+                    <h4 className="font-display font-bold text-sm text-slate-900">
+                      SBI Official Lien Marking Confirmation &amp; Non-Encashment Undertaking
+                    </h4>
+                    <p className="text-xs text-slate-600 font-mono">
+                      Doc URI: in.gov.digilocker.sbi/lien/44321 • Signatory: Chief Manager, SBI
+                    </p>
+                  </div>
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                </div>
+                <p className="text-xs text-slate-600">
+                  Irrevocable lien marked in favour of Member Secretary, AICTE. No premature withdrawal without prior written NOC from AICTE.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  <strong>India Stack Benefit:</strong> Pulling from DigiLocker eliminates paper scanning, delivers 100% digital trust, and bypasses physical courier overhead.
+                </span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDigiLockerModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={digiLockerLoading}
+                onClick={handleDigiLockerImport}
+                className="px-5 py-2.5 rounded-xl bg-[#0b3c60] hover:bg-[#082b46] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition cursor-pointer disabled:opacity-60"
+              >
+                {digiLockerLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Verifying Digital Signatures...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span>Fetch &amp; Auto-Populate from DigiLocker</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AADHAAR ESIGN MODAL (INDIA STACK) */}
+      {showAadhaarModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Tricolor stripe */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-orange-500 via-white to-green-600" />
+
+            {/* Header */}
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 flex items-center justify-center">
+                  <Fingerprint className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-base text-slate-900">
+                    Aadhaar eSign Gateway (India Stack)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    C-DAC / NSDL e-Gov Electronic Signature Service
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAadhaarModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                <div className="text-slate-500 font-mono text-[11px]">Authorized Signatory</div>
+                <div className="font-bold text-slate-900">
+                  {overview?.institution?.name ? `Authorized Head (${overview.institution.name})` : 'Dr. Rajesh Sharma, Principal'}
+                </div>
+                <div className="text-slate-600 font-mono">
+                  Aadhaar VID / UID: <strong>XXXXXXXX8921</strong>
+                </div>
+              </div>
+
+              <div className="space-y-1 text-xs text-slate-600 bg-blue-50/60 p-3 rounded-xl border border-blue-100">
+                <div className="font-bold text-blue-900">Statutory Declaration to be Signed:</div>
+                <p className="italic leading-relaxed text-[11px] text-slate-700">
+                  &ldquo;I hereby solemnly affirm under oath that all educational program regulations are satisfied, zero fee claims or student litigations are pending against FDR #{overview?.instruments?.find((i: any) => i.id === selectedRefundFdrId)?.fdr_number || 'selected'}, and this discharge is executed with full institutional liability.&rdquo;
+                </p>
+              </div>
+
+              {!aadhaarOtpSent ? (
+                <div className="space-y-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAadhaarOtpSent(true)}
+                    className="w-full py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-2xs transition cursor-pointer"
+                  >
+                    <span>Send One-Time Password (OTP) to Aadhaar Mobile</span>
+                  </button>
+                  <p className="text-[11px] text-slate-500 text-center">
+                    OTP will be dispatched to UIDAI registered mobile number ending in <strong>****4321</strong>.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 pt-2">
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+                    <span>✅ OTP dispatched to registered mobile.</span>
+                    <span className="font-mono font-bold text-emerald-800">Demo OTP: 123456</span>
+                  </div>
+
+                  <div>
+                    <label htmlFor="aadhaar-otp-input" className="block text-xs font-bold text-slate-800 mb-1">
+                      Enter 6-Digit Aadhaar OTP *
+                    </label>
+                    <input
+                      id="aadhaar-otp-input"
+                      type="text"
+                      maxLength={6}
+                      placeholder="123456"
+                      value={aadhaarOtp}
+                      onChange={(e) => setAadhaarOtp(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-center tracking-widest text-lg font-bold text-slate-900 focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={aadhaarConsent}
+                      onChange={(e) => setAadhaarConsent(e.target.checked)}
+                      className="mt-0.5 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                    />
+                    <span>
+                      I hereby give voluntary consent to authenticate using my Aadhaar credentials to generate an electronic signature under Section 3A of the Information Technology Act, 2000.
+                    </span>
+                  </label>
+
+                  {aadhaarError && (
+                    <div className="text-xs text-red-600 font-semibold">
+                      {aadhaarError}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAadhaarOtpSent(false)}
+                      className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                    >
+                      Resend OTP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleVerifyAadhaarOtp}
+                      className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Verify &amp; Apply Legal eSign</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AICTE STATUTORY COMPLIANCE CERTIFICATE MODAL */}
+      {showCertificateModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full my-8 overflow-hidden flex flex-col">
+            {/* Modal Controls Bar (hidden during print) */}
+            <div className="bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between print:hidden">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                <span className="font-display font-bold text-sm">
+                  Official AICTE Security Deposit Compliance Certificate
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print / Save as PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCertificateModal(false)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Certificate Parchment */}
+            <div className="p-8 sm:p-12 bg-amber-50/15 border-8 border-double border-[#0F2547] text-slate-900 space-y-6 relative print:p-0 print:border-4">
+              {/* Watermark effect */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] select-none">
+                <Building2 className="w-96 h-96 text-[#0F2547]" />
+              </div>
+
+              {/* Certificate Header */}
+              <div className="text-center space-y-1.5 border-b-2 border-[#0F2547]/30 pb-5">
+                <div className="font-serif text-xs font-bold text-slate-600 tracking-widest uppercase">
+                  Government of India • Ministry of Education
+                </div>
+                <h2 className="text-xl sm:text-2xl font-serif font-black tracking-wide text-[#0F2547] uppercase">
+                  अखिल भारतीय तकनीकी शिक्षा परिषद
+                </h2>
+                <h3 className="text-base sm:text-lg font-serif font-bold text-slate-800 tracking-wider">
+                  ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+                </h3>
+                <p className="text-xs text-slate-600 font-serif">
+                  (A Statutory Body of the Government of India) • Nelson Mandela Marg, Vasant Kunj, New Delhi - 110070
+                </p>
+                <div className="flex flex-wrap items-center justify-between text-xs font-mono text-slate-600 pt-3">
+                  <span>Ref: AICTE/APH-2026/SEC-DEP/{overview?.institution?.aicte_id || 'AICTE-1001'}</span>
+                  <span>Issued Date: 25 October 2026</span>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="text-center space-y-1">
+                <span className="inline-block px-3 py-1 rounded bg-[#0F2547] text-amber-300 font-serif text-xs font-bold tracking-widest uppercase shadow-2xs">
+                  Statutory Certificate
+                </span>
+                <h4 className="text-lg sm:text-xl font-serif font-bold text-[#0F2547] tracking-wide uppercase pt-1">
+                  SECURITY DEPOSIT COMPLIANCE CERTIFICATE
+                </h4>
+                <p className="text-xs italic text-slate-600">
+                  Issued under Regulation 4(3) of AICTE (Grant of Approvals for Technical Institutions) Regulations
+                </p>
+              </div>
+
+              {/* Body */}
+              <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-serif text-justify">
+                This is to officially certify that the technical institution named{' '}
+                <strong className="text-[#0F2547] font-sans font-bold">
+                  {overview?.institution?.name || 'Aaranya Institute of Technology'}
+                </strong>
+                , bearing Permanent Institute ID{' '}
+                <strong className="font-mono text-slate-900">{overview?.institution?.aicte_id || 'AICTE-INST'}</strong>,
+                situated in the{' '}
+                <strong className="text-slate-900">{overview?.institution?.region || 'Western'} Region</strong>, has
+                duly executed, pledged, and maintained the requisite statutory Fixed Deposit Receipts (FDR) / Joint
+                Encumbrance in favour of{' '}
+                <strong className="text-[#0F2547]">Member Secretary, AICTE</strong>. The encumbrance details have been
+                digitally verified with the designated scheduled commercial banks in accordance with the norms set
+                forth in the AICTE Approval Process Handbook (APH).
+              </p>
+
+              {/* Statutory Metric Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center bg-white/80 p-4 rounded-xl border border-slate-300 shadow-2xs">
+                <div className="p-2 border-r border-slate-200">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase">Certified Held Security</div>
+                  <div className="text-base font-bold text-[#0F2547]">
+                    {formatINR(overview?.totals?.held_amount || 2500000)}
+                  </div>
+                </div>
+                <div className="p-2 sm:border-r border-slate-200">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase">Active FDR Instruments</div>
+                  <div className="text-base font-bold text-slate-900">
+                    {overview?.totals?.held_count || 1} Instrument(s)
+                  </div>
+                </div>
+                <div className="p-2 border-r border-slate-200">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase">Lien Status</div>
+                  <div className="text-xs font-bold text-emerald-700 mt-1">
+                    Joint Lien Pledged
+                  </div>
+                </div>
+                <div className="p-2">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase">Compliance Standing</div>
+                  <div className={`text-xs font-bold mt-1 ${overview?.locked ? 'text-red-700' : 'text-emerald-700'}`}>
+                    {overview?.locked ? 'Overdue Renewal' : 'Good Standing'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Instruments Table */}
+              {overview?.instruments?.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider">
+                    Schedule of Covered Fixed Deposit Instruments:
+                  </div>
+                  <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table className="w-full text-[11px] text-left">
+                      <thead className="bg-[#0F2547] text-white font-mono text-[10px]">
+                        <tr>
+                          <th className="p-2">FDR Number</th>
+                          <th className="p-2">Bank &amp; Branch</th>
+                          <th className="p-2">Amount</th>
+                          <th className="p-2">Maturity Date</th>
+                          <th className="p-2">Lien Holder</th>
+                          <th className="p-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {overview.instruments.slice(0, 4).map((inst: any) => (
+                          <tr key={inst.id}>
+                            <td className="p-2 font-mono font-bold text-slate-900">{inst.fdr_number}</td>
+                            <td className="p-2">{inst.bank_name}</td>
+                            <td className="p-2 font-bold">{formatINR(inst.amount)}</td>
+                            <td className="p-2 font-mono">{inst.maturity_date}</td>
+                            <td className="p-2 text-slate-600">{inst.lien_in_favour_of || 'Member Secretary, AICTE'}</td>
+                            <td className="p-2">
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[10px] font-bold">
+                                {inst.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Certificate Footer & Signatures */}
+              <div className="pt-6 border-t-2 border-[#0F2547]/30 flex flex-wrap items-end justify-between gap-6">
+                <div className="space-y-1">
+                  <div className="w-20 h-20 bg-slate-100 border border-slate-300 rounded p-1 flex items-center justify-center">
+                    {/* Simulated QR Code SVG */}
+                    <svg viewBox="0 0 24 24" className="w-16 h-16 text-[#0F2547]" fill="currentColor">
+                      <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14 0h4v4h-4v-4zm-4 4h4v4h-4v-4zm0-4h4v-4h-4v4zm4-6h-4v2h4V10z" />
+                    </svg>
+                  </div>
+                  <div className="text-[9px] font-mono text-slate-500 max-w-[200px]">
+                    Central Registry Verification Digest:
+                    <span className="block truncate text-slate-700">SHA256: e4b7c19a8206d4e823f990a82b4512e039478f79</span>
+                  </div>
+                </div>
+
+                <div className="text-center space-y-1">
+                  <div className="w-24 h-24 rounded-full border-2 border-dashed border-[#0F2547] mx-auto flex items-center justify-center text-[10px] font-bold text-[#0F2547] uppercase leading-tight p-2 bg-amber-50">
+                    AICTE Central Regulatory Bureau Seal
+                  </div>
+                  <div className="text-[10px] font-mono text-slate-500">Verified &amp; Sealed</div>
+                </div>
+
+                <div className="text-right space-y-1">
+                  <div className="font-serif italic text-sm text-[#0F2547] font-bold pb-2">
+                    Prof. Rajive Kumar
+                  </div>
+                  <div className="text-xs font-bold text-slate-900">Member Secretary</div>
+                  <div className="text-[11px] text-slate-600">
+                    All India Council for Technical Education
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

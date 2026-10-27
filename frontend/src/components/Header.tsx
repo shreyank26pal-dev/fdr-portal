@@ -63,6 +63,14 @@ export const Header: React.FC<HeaderProps> = ({
   const noteDialogRef = useRef<HTMLDialogElement>(null);
   const helpDialogRef = useRef<HTMLDialogElement>(null);
   const [showNotifPopover, setShowNotifPopover] = useState(false);
+  const [lang, setLang] = useState<'en' | 'hi'>(() => {
+    return (localStorage.getItem('securedeposit_lang') as 'en' | 'hi') || 'en';
+  });
+
+  const handleToggleLang = (newLang: 'en' | 'hi') => {
+    setLang(newLang);
+    localStorage.setItem('securedeposit_lang', newLang);
+  };
 
   const unreadCount = notifications.filter((n) => !n.read_at && !n.is_read).length;
 
@@ -84,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="bg-white h-1 w-full" />
                 <span className="bg-[#138808] h-1 w-full" />
               </span>
-              <span>भारत सरकार | Government of India • Ministry of Education (AICTE)</span>
+              <span>{lang === 'hi' ? 'भारत सरकार • शिक्षा मंत्रालय (AICTE)' : 'भारत सरकार | Government of India • Ministry of Education (AICTE)'}</span>
             </span>
             <span className="hidden md:inline-block text-slate-400">|</span>
             <span className="hidden md:inline-block font-mono text-[11px] text-amber-300">
@@ -93,6 +101,30 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Bilingual NEP 2020 / Bhashini Toggle */}
+            <div className="inline-flex rounded-full bg-white/10 p-0.5 border border-white/20 text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => handleToggleLang('en')}
+                className={`px-2 py-0.5 rounded-full transition cursor-pointer ${
+                  lang === 'en' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-200 hover:text-white'
+                }`}
+                title="English"
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleLang('hi')}
+                className={`px-2 py-0.5 rounded-full transition cursor-pointer ${
+                  lang === 'hi' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-200 hover:text-white'
+                }`}
+                title="हिन्दी (NEP 2020 / Bhashini)"
+              >
+                हिन्दी
+              </button>
+            </div>
+
             {/* Simulated Today / Time-Travel Pill */}
             <button
               type="button"
@@ -105,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Click to open Time-Travel Clock & Demo Controls"
             >
               <Clock className="w-3.5 h-3.5 text-amber-300" />
-              <span>Simulated Today: {simulatedToday || 'Loading...'}</span>
+              <span>{lang === 'hi' ? 'अनुकरणीय तिथि:' : 'Simulated Today:'} {simulatedToday || 'Loading...'}</span>
               {clockOffsetDays !== 0 && (
                 <span className="bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded font-bold">
                   +{clockOffsetDays}d
@@ -119,7 +151,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-[#EA580C] hover:bg-[#D9460F] text-white font-semibold transition cursor-pointer"
             >
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Important Note</span>
+              <span>{lang === 'hi' ? 'महत्वपूर्ण सूचना' : 'Important Note'}</span>
             </button>
 
             <button
@@ -128,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Helpline &amp; Support</span>
+              <span className="hidden sm:inline">{lang === 'hi' ? 'सहायता' : 'Helpline & Support'}</span>
             </button>
           </div>
         </div>
@@ -151,11 +183,13 @@ export const Header: React.FC<HeaderProps> = ({
                   SecureDeposit
                 </span>
                 <span className="text-[11px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                  AICTE FDR Portal
+                  {lang === 'hi' ? 'एआईसीटीई सुरक्षा जमा पोर्टल' : 'AICTE FDR Portal'}
                 </span>
               </div>
               <p className="text-xs text-slate-600">
-                All India Council for Technical Education • Security Deposit &amp; FDR Lifecycle System
+                {lang === 'hi'
+                  ? 'अखिल भारतीय तकनीकी शिक्षा परिषद • सुरक्षा जमा एवं एफडीआर जीवनचक्र प्रणाली'
+                  : 'All India Council for Technical Education • Security Deposit & FDR Lifecycle System'}
               </p>
             </div>
           </div>
@@ -175,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Compass className="w-3.5 h-3.5" />
-              <span>Explore Hub</span>
+              <span>{lang === 'hi' ? 'अन्वेषण हब' : 'Explore Hub'}</span>
             </button>
 
             <button
@@ -188,7 +222,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Building2 className="w-3.5 h-3.5" />
-              <span>Institution Portal</span>
+              <span>{lang === 'hi' ? 'संस्थान पोर्टल' : 'Institution Portal'}</span>
             </button>
 
             <button
@@ -201,7 +235,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <FileSearch className="w-3.5 h-3.5" />
-              <span>Scrutiny &amp; Risk Console</span>
+              <span>{lang === 'hi' ? 'जांच एवं जोखिम' : 'Scrutiny & Risk Console'}</span>
             </button>
 
             <button
@@ -215,7 +249,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Columns className="w-3.5 h-3.5" />
               <span>
-                Dual-Truth Split View
+                {lang === 'hi' ? 'द्वैत-सत्य विभाजन' : 'Dual-Truth Split View'}
                 {selectedInstrumentId ? ` (#${selectedInstrumentId})` : ''}
               </span>
             </button>
@@ -230,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Landmark className="w-3.5 h-3.5" />
-              <span>Blind Bank Portal</span>
+              <span>{lang === 'hi' ? 'बैंक सत्यापन' : 'Blind Bank Portal'}</span>
             </button>
 
             <button
@@ -243,7 +277,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Settings className="w-3.5 h-3.5" />
-              <span>Admin, Demo &amp; Audit</span>
+              <span>{lang === 'hi' ? 'प्रशासन एवं ऑडिट' : 'Admin, Demo & Audit'}</span>
             </button>
           </nav>
 

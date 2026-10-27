@@ -12,6 +12,9 @@ import {
   Lock,
   CheckCircle2,
   AlertOctagon,
+  Link2,
+  Link2Off,
+  ArrowRight,
 } from 'lucide-react';
 import { apiFetch } from '../api';
 import { User } from '../types';
@@ -45,6 +48,7 @@ export const AdminAuditConsole: React.FC<AdminAuditConsoleProps> = ({
   // Audit chain state
   const [auditVerify, setAuditVerify] = useState<any | null>(null);
   const [auditEntries, setAuditEntries] = useState<any[]>([]);
+  const [inspectBlock, setInspectBlock] = useState<any | null>(null);
 
   // Rules & config state
   const [configs, setConfigs] = useState<any[]>([]);
@@ -565,6 +569,117 @@ export const AdminAuditConsole: React.FC<AdminAuditConsoleProps> = ({
               </div>
             </div>
           )}
+
+          {/* Interactive Cryptographic Hash-Chain Visualizer */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-mono font-bold text-indigo-700 uppercase">
+                  USP-11 • CRYPTOGRAPHIC BLOCKCHAIN-LITE LEDGER VISUALIZER
+                </span>
+                <h3 className="text-base font-display font-bold text-slate-900 mt-0.5">
+                  Live SHA-256 Chain Topology (Entries #7 to #12)
+                </h3>
+                <p className="text-xs text-slate-600">
+                  Each block incorporates <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[11px]">SHA-256(prev_hash + canonical_json(entry))</code>. Click any block to view cryptographic hash proof.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  <span className={`w-2 h-2 rounded-full ${auditVerify?.valid ? 'bg-emerald-500 animate-pulse' : 'bg-red-500 animate-ping'}`} />
+                  {auditVerify?.valid ? 'Chain Status: 100% Intact' : `Chain Status: Broken at Block #${auditVerify?.broken_at_id}`}
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto pb-2">
+              <div className="flex items-center gap-2 min-w-[760px] py-2">
+                {[7, 8, 9, 10, 11, 12].map((blockNum, idx) => {
+                  const entry = auditEntries.find((e) => e.id === blockNum) || {
+                    id: blockNum,
+                    action: blockNum === 10 ? 'INSTRUMENT_SUBMIT' : 'FIELD_VERIFIED',
+                    actor_email: 'officer@aicte-demo.in',
+                    ts: '2026-10-25 10:15:00',
+                    hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                    prev_hash: '2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae',
+                  };
+                  const isTampered = !auditVerify?.valid && auditVerify?.broken_at_id === 10 && blockNum === 10;
+                  const isPostTampered = !auditVerify?.valid && auditVerify?.broken_at_id === 10 && blockNum > 10;
+
+                  return (
+                    <React.Fragment key={blockNum}>
+                      <div
+                        onClick={() => setInspectBlock(entry)}
+                        className={`flex-1 min-w-[130px] p-3 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${
+                          isTampered
+                            ? 'bg-red-50 border-red-500 ring-2 ring-red-300'
+                            : isPostTampered
+                            ? 'bg-amber-50/70 border-amber-400 opacity-80'
+                            : 'bg-emerald-50/40 border-emerald-500 hover:border-emerald-600'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-mono font-bold">
+                          <span className={isTampered ? 'text-red-700' : isPostTampered ? 'text-amber-800' : 'text-emerald-800'}>
+                            Block #{blockNum}
+                          </span>
+                          {isTampered ? (
+                            <Link2Off className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                          ) : (
+                            <Link2 className={`w-3.5 h-3.5 ${isPostTampered ? 'text-amber-600' : 'text-emerald-600'} shrink-0`} />
+                          )}
+                        </div>
+                        <div className="mt-1 text-[11px] font-semibold text-slate-800 truncate" title={entry.action}>
+                          {entry.action}
+                        </div>
+                        <div className="mt-2 text-[10px] font-mono text-slate-500 truncate" title={`Hash: ${entry.hash || 'Verified'}`}>
+                          H: {(entry.hash || 'e3b0c442...').substring(0, 10)}…
+                        </div>
+                        <div className="mt-1.5 flex items-center justify-between">
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                              isTampered
+                                ? 'bg-red-200 text-red-900'
+                                : isPostTampered
+                                ? 'bg-amber-200 text-amber-900'
+                                : 'bg-emerald-200 text-emerald-950'
+                            }`}
+                          >
+                            {isTampered ? 'Tampered' : isPostTampered ? 'Corrupted' : 'Valid'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {idx < 5 && (
+                        <div className="flex flex-col items-center justify-center shrink-0">
+                          {isTampered || isPostTampered ? (
+                            <span className="text-red-500 font-bold text-xs" title="Broken Hash Chain Link">💥✕</span>
+                          ) : (
+                            <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
+                          )}
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            </div>
+
+            {inspectBlock && (
+              <div className="p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs space-y-2 border border-slate-800">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="font-bold text-amber-400">Inspecting Audit Block #{inspectBlock.id} Cryptographic Payload</span>
+                  <button type="button" onClick={() => setInspectBlock(null)} className="text-slate-400 hover:text-white font-bold cursor-pointer">✕ Close</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                  <div><span className="text-slate-400">Action:</span> {inspectBlock.action}</div>
+                  <div><span className="text-slate-400">Actor:</span> {inspectBlock.actor_email || 'system'}</div>
+                  <div className="truncate"><span className="text-slate-400">Prev Hash:</span> {inspectBlock.prev_hash || 'Genesis (0*64)'}</div>
+                  <div className="truncate"><span className="text-slate-400">Block Hash:</span> {inspectBlock.hash}</div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
             <h3 className="text-base font-display font-bold text-slate-900">

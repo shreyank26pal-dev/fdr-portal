@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("ENABLE_SCHEDULER", "false")
+os.environ["ENABLE_SCHEDULER"] = "false"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -21,8 +21,9 @@ PW = "Password@123"
 
 @pytest.fixture(scope="module")
 def client():
-    subprocess.run([sys.executable, "-m", "scripts.seed", "--reset"], cwd=BACKEND, check=True,
-                   stdout=subprocess.DEVNULL)
+    if not os.environ.get("SKIP_SEED"):
+        subprocess.run([sys.executable, "-m", "scripts.seed", "--reset"], cwd=BACKEND, check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     from app.main import app
 
     with TestClient(app) as c:

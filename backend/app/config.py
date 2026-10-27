@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_MB: int = 10
 
     # CORS (comma separated)
-    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
 
     # Email (Mailpit in docker-compose catches everything at http://localhost:8025)
     SMTP_HOST: str = ""
